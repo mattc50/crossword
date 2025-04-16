@@ -1,13 +1,19 @@
 import { useEffect, useState } from "react";
-import { getAuth, signInWithPhoneNumber, RecaptchaVerifier, getAdditionalUserInfo } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../firebase/firebase";
+import PinInput from "./PinInput";
 
-const AuthForm = () => {
+interface AuthFormProps {
+  setProcessing: React.Dispatch<React.SetStateAction<boolean>>;
+  setUser: React.Dispatch<React.SetStateAction<{ name: string; phone: string } | null>>;
+}
+
+const AuthForm = ({ setProcessing, setUser }: AuthFormProps) => {
   const [name, setName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [code, setCode] = useState("");
-  const [step, setStep] = useState<"enterPhone" | "enterCode">("enterPhone");
+  const [code, setCode] = useState<string>("");
+  const [step, setStep] = useState<"enterPhone" | "enterCode" | "authenticated">("enterPhone");
 
   // Initializes Firebase Authentication instance
   const auth = getAuth();
@@ -29,9 +35,12 @@ const AuthForm = () => {
   // Sends a verification code to the user's phone number
   const sendVerificationCode = async () => {
     try {
-      // Sends an SMS verification code to the provided phone number
-      const confirmation = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
-      window.confirmationResult = confirmation; // Store the confirmation result globally for later use
+      const confirmation = await signInWithPhoneNumber(
+        auth,
+        phoneNumber,
+        window.recaptchaVerifier
+      );
+      window.confirmationResult = confirmation;
       setStep("enterCode");
     } catch (error) {
       console.error("Error sending verification code:", error);
@@ -41,25 +50,59 @@ const AuthForm = () => {
   // Verifies the code entered by the user
   const verifyCode = async () => {
     try {
-      // Confirm the verification code entered by the user
+      setProcessing(true);
       const result = await window.confirmationResult.confirm(code);
-      const user = result.user; // Get the authenticated user object
+      const user = result.user;
 
-      // Use getAdditionalUserInfo to check if the user is new
-      const additionalUserInfo = getAdditionalUserInfo(result);
-      if (additionalUserInfo?.isNewUser) {
-        // If the user is new, save their data to Firestore
-        await setDoc(doc(db, "users", user.uid), {
-          name,
-          phone: user.phoneNumber,
-          createdAt: new Date(),
-        });
-        console.log("New user registered:", user);
-      } else {
-        console.log("Existing user signed in:", user);
-      }
+      console.log("User authenticated:", user);
+
+      // Check if the Firestore document exists
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      const userData = {
+        name,
+        phone: user.phoneNumber || "Unknown",
+      };
+      await saveUser(user.uid, userData.name, userData.phone);
+
+      // let userData: { name: string, phone: string };
+      // if (!userDoc.exists()) {
+      //   // Create a new Firestore document for the user
+      //   const newUserData = {
+      //     name,
+      //     phone: user.phoneNumber || "Unknown",
+      //     createdAt: new Date(),
+      //     lastLogin: new Date(),
+      //   };
+      //   await setDoc(userDocRef, newUserData);
+      //   console.log("New user document created.");
+      //   userData = {
+      //     name: newUserData.name,
+      //     phone: newUserData.phone,
+      //   };
+      // } else {
+      //   // Update the lastLogin field for existing users
+      //   const existingUserData = userDoc.data() as { name: string; phone: string };
+
+      //   await setDoc(
+      //     userDocRef,
+      //     { lastLogin: new Date() },
+      //     { merge: true }
+      //   );
+      //   console.log("User document updated.");
+
+      //   // Extract only the required fields
+      //   userData = { name: existingUserData.name, phone: existingUserData.phone };
+      // }
+      setUser(userData as { name: string; phone: string });
+
+      // Update the UI to reflect the authenticated state
+      setStep("authenticated");
     } catch (error) {
       console.error("Error verifying code:", error);
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -85,11 +128,14 @@ const AuthForm = () => {
 
       {step === "enterCode" && (
         <div>
-          <input
+          {/* <input
             type="text"
             placeholder="Enter verification code"
             value={code}
             onChange={(e) => setCode(e.target.value)}
+          /> */}
+          <PinInput
+            setValue={setCode}
           />
           <button onClick={verifyCode}>Verify Code</button>
         </div>

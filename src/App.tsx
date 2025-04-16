@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react'
-// import reactLogo from './assets/react.svg'
-// import viteLogo from '/vite.svg'
 import './App.css'
 import FirebaseTest from './FirebaseTest'
 import AuthForm from './components/AuthForm'
@@ -9,30 +7,37 @@ import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from './firebase/firebase'
 
 function App() {
-  // const [count, setCount] = useState(0)
   const [user, setUser] = useState<{ name: string, phone: string } | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    // Listen for authentication state changes
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // If user is logged in, fetch user data from Firestore
-        const userDocRef = doc(db, "users", firebaseUser.uid);
-        const userDoc = await getDoc(userDocRef)
-        if (userDoc.exists()) {
-          setUser(userDoc.data() as { name: string, phone: string })
-        } else {
-          console.log('No such document!')
+        setLoading(true);
+        try {
+          const userDocRef = doc(db, "users", firebaseUser.uid);
+          const userDoc = await getDoc(userDocRef);
+
+          if (userDoc.exists()) {
+            const userData = userDoc.data() as { name: string; phone: string };
+            setUser(userData);
+          } else {
+            console.error("User document not found.");
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+        } finally {
+          setLoading(false);
         }
       } else {
-        setUser(null)
+        setUser(null);
+        setLoading(false);
       }
-      setLoading(false)
-    })
+    });
 
-    return () => unsubscribe()
-  }, [])
+    return () => unsubscribe();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -43,7 +48,10 @@ function App() {
     }
   }
 
-  if (loading) return <p>Loading...</p>;
+  if (loading || processing) return <p>Loading...</p>;
+  // if (error) return <p>{error}</p>;
+
+  console.log(user);
 
   return (
     <div>
@@ -56,33 +64,11 @@ function App() {
         </div>
       ) : (
         <>
-          <FirebaseTest />
-          <AuthForm />
+          {/* <FirebaseTest /> */}
+          <AuthForm setProcessing={setProcessing} setUser={setUser} />
         </>
       )}
     </div>
-    // <>
-    //   <div>
-    //     <a href="https://vite.dev" target="_blank">
-    //       <img src={viteLogo} className="logo" alt="Vite logo" />
-    //     </a>
-    //     <a href="https://react.dev" target="_blank">
-    //       <img src={reactLogo} className="logo react" alt="React logo" />
-    //     </a>
-    //   </div>
-    //   <h1>Vite + React</h1>
-    //   <div className="card">
-    //     <button onClick={() => setCount((count) => count + 1)}>
-    //       count is {count}
-    //     </button>
-    //     <p>
-    //       Edit <code>src/App.tsx</code> and save to test HMR
-    //     </p>
-    //   </div>
-    //   <p className="read-the-docs">
-    //     Click on the Vite and React logos to learn more
-    //   </p>
-    // </>
   )
 }
 
