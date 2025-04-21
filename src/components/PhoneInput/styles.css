@@ -1,0 +1,8 @@
+.phone-input-container {
+  display: flex;
+  gap: 8px;
+
+  & .text-field.select {
+    flex-shrink: 1;
+  }
+}

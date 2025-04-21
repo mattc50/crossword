@@ -1,0 +1,41 @@
+.text-field {
+  padding: 12px;
+  border-radius: 8px;
+  transition: 0.2s;
+  border: none;
+  outline-color: transparent;
+  box-shadow: inset 0 0 0 1px #ccc;
+  background: white;
+  color: #333;
+  font-size: 1rem;
+  line-height: 1.5;
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px #646cff;
+  }
+}
+
+.select-container {
+  position: relative;
+  
+  & select {
+    padding-right: 36px;
+    appearance: none;
+    border: none;
+    margin: 0;
+  }
+}
+
+.select-icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 8px;
+  pointer-events: none;
+
+  & svg {
+    color: #333;
+    display: block;
+  }
+}

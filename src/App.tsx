@@ -1,29 +1,53 @@
-import { useEffect, useState } from 'react'
-import './App.css'
-import FirebaseTest from './FirebaseTest'
-import AuthForm from './components/AuthForm'
-import { onAuthStateChanged, signOut } from 'firebase/auth'
-import { doc, getDoc } from 'firebase/firestore'
-import { auth, db } from './firebase/firebase'
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { auth, db } from "./firebase/firebase";
+import AuthForm from "./screens/AuthForm";
+import LandingPage from "./screens/LandingPage";
 
 function App() {
-  const [user, setUser] = useState<{ name: string, phone: string } | null>(null)
-  const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
+  const [user, setUser] = useState<{ name: string; phone: string, achievements: any[] } | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isCreatingUser, setIsCreatingUser] = useState<boolean>(false);
+
+  useEffect(() => {
+    console.log("User state updated:", user);
+  }, [user]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
       if (firebaseUser) {
-        setLoading(true);
+        if(isCreatingUser) {
+        // setAuthenticating(true);
+        console.log("User creation in progress. Deferring user state update...");
+        setLoading(false);
+        return; // Defer handling the user state until user creation is complete
+        }
         try {
           const userDocRef = doc(db, "users", firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
 
           if (userDoc.exists()) {
-            const userData = userDoc.data() as { name: string; phone: string };
+            const userData = userDoc.data() as { name: string; phone: string, achievements: any[] };
             setUser(userData);
           } else {
-            console.error("User document not found.");
+            // console.log("User does not exist. Creating new user...");
+            console.log("User does not exist. Redirecting to /auth...");
+            setUser(null);
+
+            // await setDoc(userDocRef, newUser);
+            // setUser(newUser); // Update the user state with new data
+            // const newUser = {
+            //   name: "", // Replace with actual logic to get the name
+            //   phone: firebaseUser.phoneNumber || "Unknown",
+            //   achievements: [],
+            //   createdAt: new Date(),
+            // };
+
+            // await setDoc(userDocRef, newUser);
+            // setUser(newUser); // Update the user state with new data
           }
         } catch (error) {
           console.error("Error fetching user data:", error);
@@ -37,39 +61,35 @@ function App() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [isCreatingUser]);
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth); //Sign out the user
-      console.log('User logged out successfully');
-    } catch (error) {
-      console.error('Error logging out:', error);
-    }
-  }
-
-  if (loading || processing) return <p>Loading...</p>;
-  // if (error) return <p>{error}</p>;
-
-  console.log(user);
+  if (loading) return <p>Loading...</p>;
 
   return (
-    <div>
-      <h1>My Game</h1>
-      {user ? (
-        <div>
-          <p>Welcome, {user.name}!</p>
-          <p>Your phone number: {user.phone}</p>
-          <button onClick={handleLogout}>Logout</button>
-        </div>
-      ) : (
-        <>
-          {/* <FirebaseTest /> */}
-          <AuthForm setProcessing={setProcessing} setUser={setUser} />
-        </>
-      )}
-    </div>
-  )
+    <Router>
+      <Routes>
+        <Route
+          path="/auth"
+          element={user || isCreatingUser ? <Navigate to="/" replace /> : <AuthForm setIsCreatingUser={setIsCreatingUser} setUser={setUser} />}
+        />
+        {/* <Route
+          path="/"
+          element={user && user.name && user.phone ? <LandingPage user={user} setUser={setUser} /> : <Navigate to="/auth" replace />}
+        /> */}
+        <Route
+          path="/"
+          element={
+            user
+              ? <LandingPage user={user} setUser={setUser} />
+              : isCreatingUser
+              ? <p>Authenticating...</p> // Show a temporary message while authenticating
+              : <Navigate to="/auth" replace />
+          }
+        />
+        <Route path="*" element={<Navigate to={user ? "/" : "/auth"} replace />} />
+      </Routes>
+    </Router>
+  );
 }
 
-export default App
+export default App;

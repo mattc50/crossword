@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import "./styles.css";
 
 interface PinInputProps {
   setValue: React.Dispatch<React.SetStateAction<string>>;

@@ -35,7 +35,7 @@ export const saveUser = functions.https.onCall(async (data, context) => {
   }
 
   const { uid } = context.auth;
-  const { name, phone } = data;
+  const { name, phone, achievemments } = data;
 
   // Validate input
   if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -60,6 +60,7 @@ export const saveUser = functions.https.onCall(async (data, context) => {
       {
         name,
         phone,
+        achievemments: achievemments || [],
         lastLogin: admin.firestore.FieldValue.serverTimestamp(),
       },
       { merge: true }
@@ -71,138 +72,6 @@ export const saveUser = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError(
       "internal",
       "An error occurred while saving the user."
-    );
-  }
-});
-
-export const getUser = functions.https.onCall(async (data, context) => {
-  // Ensure the user is authenticated
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-      "unauthenticated",
-      "User must be authenticated to call this function."
-    );
-  }
-
-  const { uid } = context.auth;
-
-  const userDocRef = db.collection("users").doc(uid);
-
-  try {
-    const userDoc = await userDocRef.get();
-
-    if (!userDoc.exists) {
-      throw new functions.https.HttpsError(
-        "not-found",
-        "User document not found."
-      );
-    }
-
-    return { success: true, data: userDoc.data() };
-  } catch (error) {
-    console.error("Error fetching user:", error);
-    throw new functions.https.HttpsError(
-      "internal",
-      "An error occurred while fetching the user."
-    );
-  }
-});
-
-export const getUser = functions.https.onCall(async (data, context) => {
-  // Ensure the user is authenticated
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-      "unauthenticated",
-      "User must be authenticated to call this function."
-    );
-  }
-
-  const { uid } = context.auth;
-
-  const userDocRef = db.collection("users").doc(uid);
-
-  try {
-    const userDoc = await userDocRef.get();
-
-    if (!userDoc.exists) {
-      throw new functions.https.HttpsError(
-        "not-found",
-        "User document not found."
-      );
-    }
-
-    return { success: true, data: userDoc.data() };
-  } catch (error) {
-    console.error("Error fetching user:", error);
-    throw new functions.https.HttpsError(
-      "internal",
-      "An error occurred while fetching the user."
-    );
-  }
-});
-
-export const getUser = functions.https.onCall(async (data, context) => {
-  // Ensure the user is authenticated
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-      "unauthenticated",
-      "User must be authenticated to call this function."
-    );
-  }
-
-  const { uid } = context.auth;
-
-  const userDocRef = db.collection("users").doc(uid);
-
-  try {
-    const userDoc = await userDocRef.get();
-
-    if (!userDoc.exists) {
-      throw new functions.https.HttpsError(
-        "not-found",
-        "User document not found."
-      );
-    }
-
-    return { success: true, data: userDoc.data() };
-  } catch (error) {
-    console.error("Error fetching user:", error);
-    throw new functions.https.HttpsError(
-      "internal",
-      "An error occurred while fetching the user."
-    );
-  }
-});
-
-export const getUser = functions.https.onCall(async (data, context) => {
-  // Ensure the user is authenticated
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-      "unauthenticated",
-      "User must be authenticated to call this function."
-    );
-  }
-
-  const { uid } = context.auth;
-
-  const userDocRef = db.collection("users").doc(uid);
-
-  try {
-    const userDoc = await userDocRef.get();
-
-    if (!userDoc.exists) {
-      throw new functions.https.HttpsError(
-        "not-found",
-        "User document not found."
-      );
-    }
-
-    return { success: true, data: userDoc.data() };
-  } catch (error) {
-    console.error("Error fetching user:", error);
-    throw new functions.https.HttpsError(
-      "internal",
-      "An error occurred while fetching the user."
     );
   }
 });

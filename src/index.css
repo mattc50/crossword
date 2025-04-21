@@ -1,3 +1,7 @@
+html {
+  font-size: 16px;
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -5,7 +9,8 @@
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /* background-color: #242424; */
+  background-color: #f8eaea;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -26,6 +31,7 @@ body {
   margin: 0;
   display: flex;
   place-items: center;
+  justify-content: center;
   min-width: 320px;
   min-height: 100vh;
 }
@@ -52,24 +58,6 @@ button:hover {
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
-}
-
-.pin-input input::selection {
-  background: transparent;
-}
-
-.pin-input {
-  display: flex;
-  gap: 8px;
-}
-
-.pin-input-box {
-  width: 40px;
-  height: 40px;
-  text-align: center;
-  font-size: 18px;
-  border: 1px solid black;
-  border-radius: 4px;
 }
 
 #recaptcha-container {

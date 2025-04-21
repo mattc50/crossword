@@ -1,6 +1,7 @@
 import { ReactElement } from "react";
 
 interface Achievement {
+  id: string,
   name: string,
   description: string,
   date: Date,
