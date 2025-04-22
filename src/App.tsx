@@ -5,9 +5,10 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "./firebase/firebase";
 import AuthForm from "./screens/AuthForm";
 import LandingPage from "./screens/LandingPage";
+import GamePage from "./screens/GamePage";
 
 function App() {
-  const [user, setUser] = useState<{ name: string; phone: string, achievements: any[] } | null>(null);
+  const [user, setUser] = useState<{ uid: string, name: string; phone: string, achievements: any[] } | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isCreatingUser, setIsCreatingUser] = useState<boolean>(false);
 
@@ -19,18 +20,18 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
       if (firebaseUser) {
-        if(isCreatingUser) {
-        console.log("User creation in progress. Deferring user state update...");
-        setLoading(false);
-        return; // Defer handling the user state until user creation is complete
+        if (isCreatingUser) {
+          console.log("User creation in progress. Deferring user state update...");
+          setLoading(false);
+          return; // Defer handling the user state until user creation is complete
         }
         try {
           const userDocRef = doc(db, "users", firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
 
           if (userDoc.exists()) {
-            const userData = userDoc.data() as { name: string; phone: string, achievements: any[] };
-            setUser(userData);
+            const userData = userDoc.data() as { uid: string, name: string; phone: string, achievements: any[] };
+            setUser({ uid: userDoc.id, ...userData });
           } else {
             console.log("User does not exist. Redirecting to /auth...");
             setUser(null);
@@ -64,7 +65,15 @@ function App() {
             user
               ? <LandingPage user={user} setUser={setUser} />
               : isCreatingUser
-              ? <p>Authenticating...</p> // Show a temporary message while authenticating
+                ? <p>Authenticating...</p> // Show a temporary message while authenticating
+                : <Navigate to="/auth" replace />
+          }
+        />
+        <Route
+          path="/game/:name"
+          element={
+            user
+              ? <GamePage user={user} />
               : <Navigate to="/auth" replace />
           }
         />

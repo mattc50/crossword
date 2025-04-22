@@ -6,6 +6,8 @@ import PhoneInput from "../../components/PhoneInput";
 import TextField from "../../components/TextFields/TextField";
 import "./styles.css";
 import { useNavigate } from "react-router-dom";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../firebase/firebase";
 
 interface AuthFormProps {
   // setProcessing: React.Dispatch<React.SetStateAction<boolean>>;
@@ -85,8 +87,17 @@ const AuthForm = ({ setIsCreatingUser, setUser }: AuthFormProps) => {
       await saveUser(user.uid, userData.name, userData.phone); // Save user data
       setUser(userData);
 
-      // Update the UI to reflect the authenticated state
+      // const userDocRef = doc(db, "users", user.uid);
+      // const userDoc = await getDoc(userDocRef);
+
+      // if (userDoc.exists()) {
+      //   setUser({ uid: user.uid, ...(userDoc.data() as any) });
+      // } else {
+      //   setUser(null);
+      // }
+
       navigate("/");
+      // Update the UI to reflect the authenticated state
     } catch (error) {
       console.error("Error verifying code:", error);
 
