@@ -1,3 +1,7 @@
 .landing-page-container {
   text-align: center;
+
+  & > h1, p {
+    color: #333;
+  }
 }

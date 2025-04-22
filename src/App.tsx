@@ -20,7 +20,6 @@ function App() {
       setLoading(true);
       if (firebaseUser) {
         if(isCreatingUser) {
-        // setAuthenticating(true);
         console.log("User creation in progress. Deferring user state update...");
         setLoading(false);
         return; // Defer handling the user state until user creation is complete
@@ -33,21 +32,8 @@ function App() {
             const userData = userDoc.data() as { name: string; phone: string, achievements: any[] };
             setUser(userData);
           } else {
-            // console.log("User does not exist. Creating new user...");
             console.log("User does not exist. Redirecting to /auth...");
             setUser(null);
-
-            // await setDoc(userDocRef, newUser);
-            // setUser(newUser); // Update the user state with new data
-            // const newUser = {
-            //   name: "", // Replace with actual logic to get the name
-            //   phone: firebaseUser.phoneNumber || "Unknown",
-            //   achievements: [],
-            //   createdAt: new Date(),
-            // };
-
-            // await setDoc(userDocRef, newUser);
-            // setUser(newUser); // Update the user state with new data
           }
         } catch (error) {
           console.error("Error fetching user data:", error);
@@ -72,10 +58,6 @@ function App() {
           path="/auth"
           element={user || isCreatingUser ? <Navigate to="/" replace /> : <AuthForm setIsCreatingUser={setIsCreatingUser} setUser={setUser} />}
         />
-        {/* <Route
-          path="/"
-          element={user && user.name && user.phone ? <LandingPage user={user} setUser={setUser} /> : <Navigate to="/auth" replace />}
-        /> */}
         <Route
           path="/"
           element={

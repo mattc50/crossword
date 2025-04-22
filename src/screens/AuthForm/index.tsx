@@ -19,15 +19,9 @@ const AuthForm = ({ setIsCreatingUser, setUser }: AuthFormProps) => {
   const [code, setCode] = useState<string>("");
   const stepRef = useRef<"enterPhone" | "enterCode">("enterPhone"); // Persist step state
   const [step, setStep] = useState<"enterPhone" | "enterCode">("enterPhone");
-  // const [loading, setLoading] = useState<boolean>(true);
   const [processing, setProcessing] = useState<boolean>(false);
 
   const navigate = useNavigate();
-
-  // console.log(step, stepRef.current);
-  console.log(phoneNumber);
-  // console.log(stepRef.current);
-
 
   // Initializes Firebase Authentication instance
   const auth = getAuth();
@@ -39,25 +33,6 @@ const AuthForm = ({ setIsCreatingUser, setUser }: AuthFormProps) => {
     return () => console.log("AuthForm unmounted");
   }, []);
 
-  // This effect sets up an invisible reCAPTCHA verifier
-  // useEffect(() => {
-  //   if (!window.recaptchaVerifier) {
-  //     window.recaptchaVerifier = new RecaptchaVerifier(
-  //       auth, //Firebase Auth instance
-  //       "recaptcha-container", // The ID of the container where the reCAPTCHA will be rendered
-  //       { size: "invisible" }, // Configures the reCAPTCHA to be invisible
-  //     );
-
-  //     // Render the reCAPTCHA widget
-  //     window.recaptchaVerifier.render().catch(console.error);
-  //   }
-
-  //   return () => {
-  //     // Cleanup reCAPTCHA verifier if needed
-  //     // window.recaptchaVerifier = undefined;
-  //     window.recaptchaVerifier?.clear(); // Clear the reCAPTCHA verifier
-  //   };
-  // }, [auth]);
   useEffect(() => {
     if (!recaptchaVerifierRef.current) {
       const verifier = new RecaptchaVerifier(
@@ -74,13 +49,9 @@ const AuthForm = ({ setIsCreatingUser, setUser }: AuthFormProps) => {
   const sendVerificationCode = async () => {
     console.log("Sending verification code...");
     try {
-      // setProcessing(true);
-
-
       const confirmation = await signInWithPhoneNumber(
         auth,
         phoneNumber,
-        // window.recaptchaVerifier
         recaptchaVerifierRef.current!
       );
 
@@ -90,9 +61,6 @@ const AuthForm = ({ setIsCreatingUser, setUser }: AuthFormProps) => {
       setStep("enterCode");
     } catch (error) {
       console.error("Error sending verification code:", error);
-      // } finally {
-      //   setProcessing(false);
-      // }
     };
   };
 
@@ -118,7 +86,6 @@ const AuthForm = ({ setIsCreatingUser, setUser }: AuthFormProps) => {
       setUser(userData);
 
       // Update the UI to reflect the authenticated state
-      // if (userData && userData.name && userData.phone) navigate("/");
       navigate("/");
     } catch (error) {
       console.error("Error verifying code:", error);

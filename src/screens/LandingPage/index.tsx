@@ -1,5 +1,6 @@
 import { signOut } from "firebase/auth";
 import { auth } from "../../firebase/firebase";
+import "./styles.css";
 
 interface LandingPageProps {
   user: { name: string; phone: string, achievements: any[] };
