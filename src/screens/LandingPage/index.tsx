@@ -74,11 +74,11 @@ const LandingPage = ({ user, setUser }: LandingPageProps) => {
         // createdAt: new Date(),
         createdAt: Timestamp.fromDate(new Date()),
         board: {
-          row1: ["", "", "", "", ""],
-          row2: ["", "", "", "", ""],
-          row3: ["", "", "", "", ""],
-          row4: ["", "", "", "", ""],
-          row5: ["", "", "", "", ""]
+          0: ["", "", "", "", ""],
+          1: ["", "", "", "", ""],
+          2: ["", "", "", "", ""],
+          3: ["", "", "", "", ""],
+          4: ["", "", "", "", ""]
         },
         userId: user.uid
       };
