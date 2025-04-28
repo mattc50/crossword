@@ -8,6 +8,7 @@ interface SquareProps {
   id: string;
   letter: string;
   selected: boolean;
+  black: boolean;
   highlighted: boolean;
   onClick: React.MouseEventHandler<SVGSVGElement>;
   onKeyDown: React.KeyboardEventHandler<SVGSVGElement>;
@@ -17,6 +18,7 @@ interface SquareProps {
 const GamePage = ({ user }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [game, setGame] = useState<any>(null);
+  const [starts, setStarts] = useState<{ horizontal: {}, vertical: {} }>({ horizontal: {}, vertical: {} });
   const [widths, setWidths] = useState<{
     innerWidth: number,
     keyWidth: number
@@ -30,6 +32,11 @@ const GamePage = ({ user }) => {
   const [direction, setDirection] = useState<"horizontal" | "vertical">("horizontal");
 
   const [gameBoard, setGameBoard] = useState([
+    ["", "", "", "", ""],
+    ["", "", "", "", ""],
+    ["", "", "", "", ""],
+    ["", "", "", "", ""],
+    ["", "", "", "", ""]
   ])
 
   const keyboardRef = useRef<HTMLDivElement | null>(null);
@@ -61,11 +68,66 @@ const GamePage = ({ user }) => {
     }
   }
 
-  useEffect(() => {
-    const gameId = window.location.pathname.split("/")[2];
-    console.log(gameId);
-    fetchGame(gameId);
-  }, [])
+  const toggleBlack = (box) => {
+    const row = parseInt(box.split("-")[2]);
+    const column = parseInt(box.split("-")[1]);
+    setGameBoard((prevBoard) => {
+      const newBoard = prevBoard.map(row => [...row]);
+      if (newBoard[row][column] === "BLACK") {
+        newBoard[row][column] = "";
+      } else {
+        newBoard[row][column] = "BLACK";
+      }
+      return newBoard;
+    });
+  }
+
+  const calculateStarts = (gameBoard) => {
+    // const starts = { horizontal: {}, vertical: {} };
+    // for (let row = 0; row < gameBoard.length; row++) {
+    //   for (let col = 0; col < gameBoard[row].length; col++) {
+    //     if (gameBoard[row][col] === "BLACK") {
+    //       continue;
+    //     }
+    //     if (col === 0 || gameBoard[row][col - 1] === "BLACK") {
+    //       starts.horizontal[`box-${row}-${col}`] = Object.keys(starts.horizontal).length + 1;
+    //     }
+    //     if (row === 0 || gameBoard[row - 1][col] === "BLACK") {
+    //       starts.vertical[`box-${row}-${col}`] = Object.keys(starts.vertical).length + 1;
+    //     }
+    //     // remove entries from horizontal if they exist in vertical
+    //     // if (starts.horizontal[`box-${row}-${col}`] && starts.vertical[`box-${row}-${col}`]) {
+    //     //   delete starts.horizontal[`box-${row}-${col}`];
+    //     // }
+    //     console.log(`adding box-${row}-${col}`)
+    //   }
+    // }
+
+    // add the first available box in each column, and index them as they appear. Only number the first available box available from the top and the left.
+    // const starts = { horizontal: {}, vertical: {} };
+    const starts = {};
+    for (let col = 0; col < 5; col++) {
+      for (let row = 0; row < gameBoard[col].length; row++) {
+        if (gameBoard[col] && gameBoard[col][row] === "BLACK") {
+          continue;
+        }
+        if (col === 0 || (row > 0 && gameBoard[col][row - 1] === "BLACK")
+          || (row === 0 || (col > 0 && gameBoard[col - 1][row] === "BLACK"))) {
+          // starts.horizontal[`box-${col}-${row}`] = Object.keys(starts.horizontal).length + 1;
+          starts[`box-${col}-${row}`] = Object.keys(starts).length + 1;
+
+        }
+        // if (row === 0 || (col > 0 && gameBoard[col - 1][row] === "BLACK")) {
+        //   starts.vertical[`box-${col}-${row}`] = Object.keys(starts.vertical).length + 1;
+        // }
+      }
+    }
+
+
+
+    console.log(starts)
+    return starts;
+  }
 
   const handleInnerWidth = () => {
     const firstKey = document.querySelector('.top button');
@@ -78,13 +140,50 @@ const GamePage = ({ user }) => {
     const newWidth = `${keyWidth}px`;
     document.documentElement.style.setProperty('--key-width', newWidth);
 
-    console.log("Set key width:", newWidth);
+    // console.log("Set key width:", newWidth);
   };
 
+  const showWords = () => {
+    console.log(starts);
+
+    const words = { horizontal: {}, vertical: {} };
+    for (let col = 0; col < 5; col++) {
+      if (starts.vertical[`box-${col}-0`]) {
+        let word = "";
+        for (let row = 0; row < 5; row++) {
+          if (gameBoard[row][col] !== "BLACK") {
+            word += gameBoard[row][col];
+          }
+        }
+        words.vertical[col + 1] = word;
+      }
+    }
+    for (let row = 0; row < 5; row++) {
+      if (starts.horizontal[`box-0-${row}`]) {
+        let word = "";
+        for (let col = 0; col < 5; col++) {
+          if (gameBoard[row][col] !== "BLACK") {
+            word += gameBoard[row][col];
+          }
+        }
+        words.horizontal[row + 1] = word;
+      }
+    }
+    console.log(words)
+  }
+
   useEffect(() => {
+    const gameId = window.location.pathname.split("/")[2];
+    console.log(gameId);
+    fetchGame(gameId);
+  }, [])
 
+  useEffect(() => {
+    setStarts(calculateStarts(gameBoard));
+  }, [gameBoard]);
+
+  useEffect(() => {
     handleInnerWidth();
-
     window.addEventListener('resize', handleInnerWidth);
 
     return () => {
@@ -95,6 +194,7 @@ const GamePage = ({ user }) => {
 
 
   const Square = ({
+    black,
     selected,
     highlighted,
     id,
@@ -103,6 +203,13 @@ const GamePage = ({ user }) => {
     letter,
     wordIndex,
   }: SquareProps) => {
+    const getColor = () => {
+      if (black) return "black";
+      if (selected) return "yellow";
+      if (highlighted) return "lightblue"
+      return "white";
+    }
+
     return (
       <svg
         width={(Math.min(500, innerWidth - 12)) / 5}
@@ -115,19 +222,14 @@ const GamePage = ({ user }) => {
       >
         <g>
           <rect
-            fill={selected
-              ? "yellow"
-              : highlighted
-                ? "lightblue"
-                : "white"
-            }
+            fill={getColor()}
             width="100%"
             height="100%"
             strokeWidth={0}
             stroke="none">
           </rect>
           {wordIndex > 0 && <text x="5%" y="25%" textAnchor="start" fontSize="20">{wordIndex}</text>}
-          <text x="50%" y="70%" textAnchor="middle" fontSize="48" data-testid={id}>{letter}</text>
+          {!black && <text x="50%" y="70%" textAnchor="middle" fontSize="48" data-testid={id}>{letter}</text>}
         </g>
       </svg>
     )
@@ -136,8 +238,6 @@ const GamePage = ({ user }) => {
   const handleClick = (event: React.MouseEvent<SVGSVGElement>) => {
     const target = event.currentTarget;
     const id = target.id;
-
-    console.log("clicked:", id)
 
     if (selectedSquare === id) {
       setDirection(direction === "horizontal" ? "vertical" : "horizontal");
@@ -221,7 +321,6 @@ const GamePage = ({ user }) => {
       if (!key.match(/^KEY[A-Z]$/)) return;
       gameBoard[row][column] = key[key.length - 1];
       setGameBoard([...gameBoard]);
-      console.log(direction)
       // text.textContent = key;
       if (direction === "horizontal") {
         moveRight(row, column);
@@ -244,6 +343,7 @@ const GamePage = ({ user }) => {
         <div className="crossword-board">
           {Array.from({ length: 25 }, (_, index) => (
             <Square
+              black={gameBoard[Math.floor(index / 5)][index % 5] === "BLACK"}
               selected={selectedSquare === `box-${index % 5}-${Math.floor(index / 5)}`}
               highlighted={direction === "horizontal"
                 ? Math.floor(index / 5) === parseInt(selectedSquare.split("-")[2])
@@ -256,10 +356,35 @@ const GamePage = ({ user }) => {
               onClick={handleClick}
               onKeyDown={(e) => handleKeyPress(e.code.toUpperCase())}
               letter={gameBoard[Math.floor(index / 5)][index % 5]}
-              wordIndex={index < 5 ? index + 1 : index % 5 === 0 ? index / 5 + 1 : 0} key={index}
+              // wordIndex={index < 5 ? index + 1 : index % 5 === 0 ? index / 5 + 1 : 0}
+              // wordIndex={starts.horizontal[`box-${Math.floor(index / 5)}-${index % 5}`]
+              //   || starts.vertical[`box-${Math.floor(index / 5)}-${index % 5}`]
+              //   || 0}
+              wordIndex={starts[`box-${Math.floor(index / 5)}-${index % 5}`]
+                || starts[`box-${Math.floor(index / 5)}-${index % 5}`]
+                || 0}
+              key={index}
             />
           ))}
         </div>
+      </div>
+      <div>
+        <button onClick={showWords}>Show Words</button>
+        <button onClick={calculateStarts}>Show Words</button>
+        <button
+          // disable if row is not 0 or 4, or column is not 0 or 4
+          // example: box-1-1 --> disabled
+          // box-0-0 --> enabled
+          // box-0-4 --> enable
+          disabled={
+            selectedSquare !== "box-0-0" &&
+            selectedSquare !== "box-0-4" &&
+            selectedSquare !== "box-4-0" &&
+            selectedSquare !== "box-4-4"
+          }
+          onClick={() => toggleBlack(selectedSquare)}
+        >Make Black
+        </button>
       </div>
       <div className="keyboard-container" ref={keyboardRef}>
         <Keyboard handleKeyPress={handleKeyPress} />
