@@ -1,5 +1,5 @@
-import { doc, getDoc } from "firebase/firestore";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { doc, getDoc, Timestamp, updateDoc } from "firebase/firestore";
+import { useEffect, useRef, useState } from "react";
 import { db } from "../../firebase/firebase";
 import "./styles.css";
 import Keyboard from "../../components/Keyboard";
@@ -11,6 +11,8 @@ interface SquareProps {
   black: boolean;
   highlighted: boolean;
   onClick: React.MouseEventHandler<SVGSVGElement>;
+  // onFocus: React.FocusEventHandler<SVGSVGElement>;
+  onFocus: (event: FocusEvent) => void;
   onKeyDown: React.KeyboardEventHandler<SVGSVGElement>;
   wordIndex?: number;
 }
@@ -18,16 +20,8 @@ interface SquareProps {
 const GamePage = ({ user }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [game, setGame] = useState<any>(null);
-  const [starts, setStarts] = useState<{ horizontal: {}, vertical: {} }>({ horizontal: {}, vertical: {} });
-  const [widths, setWidths] = useState<{
-    innerWidth: number,
-    keyWidth: number
-  }>({
-    innerWidth: window.innerWidth,
-    keyWidth: 0
-  });
+  const [starts, setStarts] = useState<{}>({});
 
-  // const [selectedSquare, setSelectedSquare] = useState<string>("");
   const [selectedSquare, setSelectedSquare] = useState<string>("");
   const [direction, setDirection] = useState<"horizontal" | "vertical">("horizontal");
 
@@ -69,6 +63,7 @@ const GamePage = ({ user }) => {
   }
 
   const toggleBlack = (box) => {
+    console.log(box)
     const row = parseInt(box.split("-")[2]);
     const column = parseInt(box.split("-")[1]);
     setGameBoard((prevBoard) => {
@@ -83,49 +78,22 @@ const GamePage = ({ user }) => {
   }
 
   const calculateStarts = (gameBoard) => {
-    // const starts = { horizontal: {}, vertical: {} };
-    // for (let row = 0; row < gameBoard.length; row++) {
-    //   for (let col = 0; col < gameBoard[row].length; col++) {
-    //     if (gameBoard[row][col] === "BLACK") {
-    //       continue;
-    //     }
-    //     if (col === 0 || gameBoard[row][col - 1] === "BLACK") {
-    //       starts.horizontal[`box-${row}-${col}`] = Object.keys(starts.horizontal).length + 1;
-    //     }
-    //     if (row === 0 || gameBoard[row - 1][col] === "BLACK") {
-    //       starts.vertical[`box-${row}-${col}`] = Object.keys(starts.vertical).length + 1;
-    //     }
-    //     // remove entries from horizontal if they exist in vertical
-    //     // if (starts.horizontal[`box-${row}-${col}`] && starts.vertical[`box-${row}-${col}`]) {
-    //     //   delete starts.horizontal[`box-${row}-${col}`];
-    //     // }
-    //     console.log(`adding box-${row}-${col}`)
-    //   }
-    // }
-
-    // add the first available box in each column, and index them as they appear. Only number the first available box available from the top and the left.
-    // const starts = { horizontal: {}, vertical: {} };
     const starts = {};
     for (let col = 0; col < 5; col++) {
       for (let row = 0; row < gameBoard[col].length; row++) {
-        if (gameBoard[col] && gameBoard[col][row] === "BLACK") {
-          continue;
+        if (gameBoard[col][row] === "BLACK") continue;
+        if ((row === 0 || row > 0 && gameBoard[col][row - 1] === "BLACK")
+          || (col === 0 || col > 0 && gameBoard[col - 1][row] === "BLACK")) {
+          starts[`box-${col}-${row}`] = {
+            index: Object.keys(starts).length + 1,
+            direction: col === 0 ? "vertical" : "horizontal"
+          }
+          
         }
-        if (col === 0 || (row > 0 && gameBoard[col][row - 1] === "BLACK")
-          || (row === 0 || (col > 0 && gameBoard[col - 1][row] === "BLACK"))) {
-          // starts.horizontal[`box-${col}-${row}`] = Object.keys(starts.horizontal).length + 1;
-          starts[`box-${col}-${row}`] = Object.keys(starts).length + 1;
-
-        }
-        // if (row === 0 || (col > 0 && gameBoard[col - 1][row] === "BLACK")) {
-        //   starts.vertical[`box-${col}-${row}`] = Object.keys(starts.vertical).length + 1;
-        // }
       }
     }
 
-
-
-    console.log(starts)
+    console.log(starts);
     return starts;
   }
 
@@ -135,42 +103,73 @@ const GamePage = ({ user }) => {
     const fallback = (Math.min(500, window.innerWidth) - 66) / 10;
     const keyWidth = firstKey ? firstKey.offsetWidth : fallback;
 
-    setWidths({ innerWidth: window.innerWidth, keyWidth });
-
     const newWidth = `${keyWidth}px`;
     document.documentElement.style.setProperty('--key-width', newWidth);
 
-    // console.log("Set key width:", newWidth);
+    const boxWidth = `${(Math.min(500, window.innerWidth - 12)) / 5}px`;
+    document.documentElement.style.setProperty('--box-width', boxWidth);
   };
 
   const showWords = () => {
-    console.log(starts);
-
     const words = { horizontal: {}, vertical: {} };
     for (let col = 0; col < 5; col++) {
-      if (starts.vertical[`box-${col}-0`]) {
+      if (starts[`box-${col}-0`]) {
         let word = "";
+        let boxes = [];
         for (let row = 0; row < 5; row++) {
           if (gameBoard[row][col] !== "BLACK") {
             word += gameBoard[row][col];
+            boxes.push(`box-${col}-${row}`)
           }
         }
-        words.vertical[col + 1] = word;
+        words.vertical[starts[`box-${col}-0`].index] = {
+          word,
+          boxes
+        }
       }
     }
     for (let row = 0; row < 5; row++) {
-      if (starts.horizontal[`box-0-${row}`]) {
+      if (starts[`box-0-${row}`]) {
         let word = "";
+        let boxes = [];
         for (let col = 0; col < 5; col++) {
           if (gameBoard[row][col] !== "BLACK") {
             word += gameBoard[row][col];
+            boxes.push(`box-${col}-${row}`)
           }
         }
-        words.horizontal[row + 1] = word;
+        if(!words.vertical[starts[`box-0-${row}`].index])
+        words.horizontal[starts[`box-0-${row}`].index] = {
+          word,
+          boxes
+        }
       }
     }
+
     console.log(words)
   }
+
+  const handleUpdateGame = async () => {
+    const gameId = window.location.pathname.split("/")[2]
+    try {
+      const gameRef = doc(db, "games", gameId);
+
+      await updateDoc(gameRef, {
+        board: {
+          0: gameBoard[0],
+          1: gameBoard[1],
+          2: gameBoard[2],
+          3: gameBoard[3],
+          4: gameBoard[4],
+        },
+        updatedAt: Timestamp.fromDate(new Date())
+      });
+
+      console.log("Game updated successfully!");
+    } catch (error) {
+      console.error("Error updating game:", error);
+    }
+  };
 
   useEffect(() => {
     const gameId = window.location.pathname.split("/")[2];
@@ -199,6 +198,7 @@ const GamePage = ({ user }) => {
     highlighted,
     id,
     onClick,
+    onFocus,
     onKeyDown,
     letter,
     wordIndex,
@@ -212,13 +212,16 @@ const GamePage = ({ user }) => {
 
     return (
       <svg
-        width={(Math.min(500, innerWidth - 12)) / 5}
-        height={(Math.min(500, innerWidth - 12)) / 5}
+        className="game-box"
+        // width={(Math.min(500, window.innerWidth - 12)) / 5}
+        // height={(Math.min(500, window.innerWidth - 12)) / 5}
+        // width="var(--box-width)"
+        // height="var(--box-width)"
         id={id}
         onClick={onClick}
+        onFocus={onFocus}
         onKeyDown={onKeyDown}
-        // tabIndex={selected ? 0 : -1}
-        tabIndex={0}
+        tabIndex={black ? -1 : 0}
       >
         <g>
           <rect
@@ -238,6 +241,9 @@ const GamePage = ({ user }) => {
   const handleClick = (event: React.MouseEvent<SVGSVGElement>) => {
     const target = event.currentTarget;
     const id = target.id;
+
+    const stringRegex = /^box-\d-\d$/;
+    if(!id.match(stringRegex)) return;
 
     if (selectedSquare === id) {
       setDirection(direction === "horizontal" ? "vertical" : "horizontal");
@@ -262,7 +268,7 @@ const GamePage = ({ user }) => {
 
   const moveUp = (row, column) => {
     if (row > 0) {
-      const nextBox = "box-" + column + "-" + (row - 1);
+      const nextBox = "box-" + column + "-" + (row - 1)
       setSelectedSquare(nextBox);
     }
   }
@@ -275,53 +281,42 @@ const GamePage = ({ user }) => {
   }
 
   const handleKeyPress = (key: string) => {
-    const target = document.getElementById(selectedSquare);
     const row = parseInt(selectedSquare.split("-")[2]);
     const column = parseInt(selectedSquare.split("-")[1]);
-    const text = target.querySelector("text[data-testid]");
 
-    if (key === "SPACE") {
-      setDirection(direction === "horizontal" ? "vertical" : "horizontal");
-      return;
-    }
+    const newGameBoard = [...gameBoard]
 
-    if (key === "ARROWRIGHT") {
-      moveRight(row, column);
-    }
+    if(newGameBoard[row][column] === "BLACK") return;
 
-    if (key === "ARROWLEFT") {
-      moveLeft(row, column);
-    }
+    if (key === "SPACE") setDirection(direction === "horizontal"
+      ? "vertical"
+      : "horizontal"
+    );
 
-    if (key === "ARROWUP") {
-      moveUp(row, column);
-    }
-
-    if (key === "ARROWDOWN") {
-      moveDown(row, column);
-    }
+    if (key === "ARROWRIGHT") moveRight(row, column);
+    if (key === "ARROWLEFT") moveLeft(row, column);
+    if (key === "ARROWUP") moveUp(row, column);
+    if (key === "ARROWDOWN") moveDown(row, column);
 
     if (key === "BACKSPACE") {
-      // text.textContent = "";
-      if (gameBoard[row][column] !== "") {
-        gameBoard[row][column] = "";
+      if (newGameBoard[row][column] !== "") {
+        newGameBoard[row][column] = "";
       } else {
         if (direction === "horizontal") {
           moveLeft(row, column);
-          gameBoard[row][column - 1] = "";
+          newGameBoard[row][column - 1] = "";
         } else if (direction === "vertical") {
           moveUp(row, column);
-          gameBoard[row - 1][column] = "";
+          newGameBoard[row - 1][column] = "";
         } else {
           return;
         }
       }
-      setGameBoard([...gameBoard]);
+      setGameBoard([...newGameBoard]);
     } else {
-      if (!key.match(/^KEY[A-Z]$/)) return;
-      gameBoard[row][column] = key[key.length - 1];
-      setGameBoard([...gameBoard]);
-      // text.textContent = key;
+      if (!key.match(/^KEY[A-Z]$/g) && !key.match(/^[A-Z]$/g)) return;
+      newGameBoard[row][column] = key[key.length - 1];
+      setGameBoard([...newGameBoard]);
       if (direction === "horizontal") {
         moveRight(row, column);
       } else if (direction === "vertical") {
@@ -337,6 +332,13 @@ const GamePage = ({ user }) => {
     if (el) el.focus();
   }, [handleClick, selectedSquare]);
 
+  const handleFocusChange = (event: FocusEvent) => {
+    const active = document.activeElement;
+    const stringRegex = /^box-\d-\d$/;
+    if(!active.id.match(stringRegex)) return;
+    setSelectedSquare(active.id);
+  };
+
   return (
     !loading && game && <div className="game-interface">
       <div className="crossword-board-container">
@@ -345,23 +347,23 @@ const GamePage = ({ user }) => {
             <Square
               black={gameBoard[Math.floor(index / 5)][index % 5] === "BLACK"}
               selected={selectedSquare === `box-${index % 5}-${Math.floor(index / 5)}`}
-              highlighted={direction === "horizontal"
-                ? Math.floor(index / 5) === parseInt(selectedSquare.split("-")[2])
-                : index % 5 === parseInt(selectedSquare.split("-")[1])
-              }
+              highlighted={(() => {
+                const col = parseInt(selectedSquare.split("-")[2])
+                const row = parseInt(selectedSquare.split("-")[1])
+                if(row >= 0 && col >= 0 && gameBoard[col][row] === "BLACK") return false;
+                return direction === "horizontal"
+                ? Math.floor(index / 5) === col
+                : index % 5 === row
+              })()}
               id={`box-${index % 5}-${Math.floor(index / 5)}`}
               data-index={index}
               data-x={index % 5}
               data-y={Math.floor(index / 5)}
               onClick={handleClick}
+              onFocus={handleFocusChange}
               onKeyDown={(e) => handleKeyPress(e.code.toUpperCase())}
               letter={gameBoard[Math.floor(index / 5)][index % 5]}
-              // wordIndex={index < 5 ? index + 1 : index % 5 === 0 ? index / 5 + 1 : 0}
-              // wordIndex={starts.horizontal[`box-${Math.floor(index / 5)}-${index % 5}`]
-              //   || starts.vertical[`box-${Math.floor(index / 5)}-${index % 5}`]
-              //   || 0}
-              wordIndex={starts[`box-${Math.floor(index / 5)}-${index % 5}`]
-                || starts[`box-${Math.floor(index / 5)}-${index % 5}`]
+              wordIndex={starts[`box-${Math.floor(index / 5)}-${index % 5}`]?.index
                 || 0}
               key={index}
             />
@@ -369,13 +371,9 @@ const GamePage = ({ user }) => {
         </div>
       </div>
       <div>
-        <button onClick={showWords}>Show Words</button>
-        <button onClick={calculateStarts}>Show Words</button>
+        <button onClick={() => showWords()}>Show Words</button>
+        <button onClick={() => calculateStarts(gameBoard)}>Calculate Starts</button>
         <button
-          // disable if row is not 0 or 4, or column is not 0 or 4
-          // example: box-1-1 --> disabled
-          // box-0-0 --> enabled
-          // box-0-4 --> enable
           disabled={
             selectedSquare !== "box-0-0" &&
             selectedSquare !== "box-0-4" &&
@@ -385,6 +383,7 @@ const GamePage = ({ user }) => {
           onClick={() => toggleBlack(selectedSquare)}
         >Make Black
         </button>
+        <button onClick={handleUpdateGame}>Update Game</button>
       </div>
       <div className="keyboard-container" ref={keyboardRef}>
         <Keyboard handleKeyPress={handleKeyPress} />

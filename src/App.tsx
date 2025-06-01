@@ -70,7 +70,7 @@ function App() {
           }
         />
         <Route
-          path="/game/:name"
+          path="/edit/:name"
           element={
             user
               ? <GamePage user={user} />

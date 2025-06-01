@@ -24,6 +24,7 @@ const Keyboard = ({ handleKeyPress }) => {
           {row.map((key, keyIndex) => (
             key !== ""
               ? <button
+                tabIndex={-1}
                 onClick={() => handleKeyPress(key)}
                 className={`key${isLetter(key) ? "" : key === "BACKSPACE" ? " backspace" : ""}`}
                 key={keyIndex}

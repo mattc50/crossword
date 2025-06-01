@@ -154,7 +154,7 @@ const LandingPage = ({ user, setUser }: LandingPageProps) => {
               {games.map((game, index) => (
                 <li key={game.id}>
                   <button onClick={() => handleDelete(game.id)}>Delete</button>
-                  <a href={`/game/${game.id}`}>{game.name}</a>
+                  <a href={`/edit/${game.id}`}>{game.name}</a>
                 </li>
               ))}
             </ul>
