@@ -31,9 +31,37 @@ const GamePage = ({ user }) => {
     ["", "", "", "", ""],
     ["", "", "", "", ""],
     ["", "", "", "", ""]
-  ])
+  ]);
+
+  const [achievementsOpen, setAchievementsOpen] = useState<boolean>(false);
+  const dialogRef = useRef<HTMLDialogElement | null>(null);
 
   const keyboardRef = useRef<HTMLDivElement | null>(null);
+
+  const [achievementsData, setAchievementsData] = useState<[]>([]);
+  /*
+
+  Structure
+
+  2: {
+    completed: "first"
+  },
+  3: {
+    completed: "in-order"
+  }
+
+  if "first" -> check that the letters of the entire word are the only 
+                letters on the board
+
+  if "in-order" ->  check that following the placement of the first letter 
+                    of the word, the word is then completed with the
+                    following placed letters
+
+                    add a listener that tracks word completion after the
+                    placement of the correct letter in the first spot of
+                    the word
+
+  */
 
   const fetchGame = async (gameId) => {
     setLoading(true);
@@ -63,7 +91,6 @@ const GamePage = ({ user }) => {
   }
 
   const toggleBlack = (box) => {
-    console.log(box)
     const row = parseInt(box.split("-")[2]);
     const column = parseInt(box.split("-")[1]);
     setGameBoard((prevBoard) => {
@@ -88,7 +115,7 @@ const GamePage = ({ user }) => {
             index: Object.keys(starts).length + 1,
             direction: col === 0 ? "vertical" : "horizontal"
           }
-          
+
         }
       }
     }
@@ -111,42 +138,37 @@ const GamePage = ({ user }) => {
   };
 
   const showWords = () => {
+    const starts = calculateStarts(gameBoard);
     const words = { horizontal: {}, vertical: {} };
-    for (let col = 0; col < 5; col++) {
-      if (starts[`box-${col}-0`]) {
-        let word = "";
-        let boxes = [];
-        for (let row = 0; row < 5; row++) {
-          if (gameBoard[row][col] !== "BLACK") {
-            word += gameBoard[row][col];
-            boxes.push(`box-${col}-${row}`)
+
+    for (const [key, value] of Object.entries(starts)) {
+      let word = "";
+      let boxes = [];
+      let horizIndex = parseInt(key.split("-")[1])
+      let vertIndex = parseInt(key.split("-")[2])
+
+      if (value.direction === "horizontal") {
+        for (let i = 0; i < 5; i++) {
+          if (gameBoard[horizIndex][i] !== "BLACK") {
+            word += gameBoard[horizIndex][i];
+            boxes.push(`box-${i}-${horizIndex}`);
           }
         }
-        words.vertical[starts[`box-${col}-0`].index] = {
-          word,
-          boxes
-        }
+        words.horizontal[value.index] = { word, boxes };
       }
-    }
-    for (let row = 0; row < 5; row++) {
-      if (starts[`box-0-${row}`]) {
-        let word = "";
-        let boxes = [];
-        for (let col = 0; col < 5; col++) {
-          if (gameBoard[row][col] !== "BLACK") {
-            word += gameBoard[row][col];
-            boxes.push(`box-${col}-${row}`)
+      if (value.direction === "vertical") {
+        for (let i = 0; i < 5; i++) {
+          if (gameBoard[i][vertIndex] !== "BLACK") {
+            word += gameBoard[i][vertIndex];
+            boxes.push(`box-${i}-${vertIndex}`);
           }
         }
-        if(!words.vertical[starts[`box-0-${row}`].index])
-        words.horizontal[starts[`box-0-${row}`].index] = {
-          word,
-          boxes
-        }
+        words.vertical[value.index] = { word, boxes };
       }
     }
 
     console.log(words)
+    return words;
   }
 
   const handleUpdateGame = async () => {
@@ -171,9 +193,12 @@ const GamePage = ({ user }) => {
     }
   };
 
+  const handleOpen = () => {
+    if (dialogRef.current) dialogRef.current.showModal();
+  }
+
   useEffect(() => {
     const gameId = window.location.pathname.split("/")[2];
-    console.log(gameId);
     fetchGame(gameId);
   }, [])
 
@@ -213,10 +238,6 @@ const GamePage = ({ user }) => {
     return (
       <svg
         className="game-box"
-        // width={(Math.min(500, window.innerWidth - 12)) / 5}
-        // height={(Math.min(500, window.innerWidth - 12)) / 5}
-        // width="var(--box-width)"
-        // height="var(--box-width)"
         id={id}
         onClick={onClick}
         onFocus={onFocus}
@@ -243,7 +264,7 @@ const GamePage = ({ user }) => {
     const id = target.id;
 
     const stringRegex = /^box-\d-\d$/;
-    if(!id.match(stringRegex)) return;
+    if (!id.match(stringRegex)) return;
 
     if (selectedSquare === id) {
       setDirection(direction === "horizontal" ? "vertical" : "horizontal");
@@ -286,7 +307,7 @@ const GamePage = ({ user }) => {
 
     const newGameBoard = [...gameBoard]
 
-    if(newGameBoard[row][column] === "BLACK") return;
+    if (newGameBoard[row][column] === "BLACK") return;
 
     if (key === "SPACE") setDirection(direction === "horizontal"
       ? "vertical"
@@ -335,7 +356,7 @@ const GamePage = ({ user }) => {
   const handleFocusChange = (event: FocusEvent) => {
     const active = document.activeElement;
     const stringRegex = /^box-\d-\d$/;
-    if(!active.id.match(stringRegex)) return;
+    if (!active.id.match(stringRegex)) return;
     setSelectedSquare(active.id);
   };
 
@@ -350,10 +371,10 @@ const GamePage = ({ user }) => {
               highlighted={(() => {
                 const col = parseInt(selectedSquare.split("-")[2])
                 const row = parseInt(selectedSquare.split("-")[1])
-                if(row >= 0 && col >= 0 && gameBoard[col][row] === "BLACK") return false;
+                if (row >= 0 && col >= 0 && gameBoard[col][row] === "BLACK") return false;
                 return direction === "horizontal"
-                ? Math.floor(index / 5) === col
-                : index % 5 === row
+                  ? Math.floor(index / 5) === col
+                  : index % 5 === row
               })()}
               id={`box-${index % 5}-${Math.floor(index / 5)}`}
               data-index={index}
@@ -384,10 +405,43 @@ const GamePage = ({ user }) => {
         >Make Black
         </button>
         <button onClick={handleUpdateGame}>Update Game</button>
+        <button onClick={handleOpen}>Edit Achievements</button>
       </div>
       <div className="keyboard-container" ref={keyboardRef}>
         <Keyboard handleKeyPress={handleKeyPress} />
       </div>
+      <dialog ref={dialogRef} className="achievements-dialog" onClick={(e) => {
+        // Close if user clicks on backdrop (not the dialog content)
+        const rect = dialogRef.current.getBoundingClientRect();
+        const isOutside =
+          e.clientX < rect.left ||
+          e.clientX > rect.right ||
+          e.clientY < rect.top ||
+          e.clientY > rect.bottom;
+        if (isOutside) dialogRef.current.close();
+      }}>
+        <div className="dialog-content">
+          <p>Hello</p>
+          {/* <form onSubmit={(e) => setAchievements(e)}>
+            <select>
+              {Object.entries(showWords().vertical).map(([key, value]) => (
+                <option value={`${key}-${value.word}`}>
+                  {`${key}: ${value.word}`}
+                </option>
+              ))}
+              {Object.entries(showWords().horizontal).map(([key, value]) => (
+                <option value={`${key}-${value.word}`}>
+                  {`${key}: ${value.word}`}
+                </option>
+              ))}
+            </select>
+            <select>
+              <option value="first">Is completed first</option>
+              <option value="in-order">Is completed in order</option>
+            </select>
+          </form> */}
+        </div>
+      </dialog>
     </div>
   )
 }
